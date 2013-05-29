@@ -13,12 +13,12 @@ import common
 all_data = defaultdict(list)
 
 
-def recv_monitor_data(monitor_id, monitor_type, value):
+def recv_monitor_data(appname, monitor_name, monitor_type, value):
+    monitor_id = '%s.%s.%s.%s' % (config.user_id, config.hostname, appname, monitor_name)
     logging.debug('recv_monitor_data:%s %s %s', monitor_id, monitor_type, value)
     data = {'monitor_id': monitor_id,
             'monitor_type': monitor_type,
             'value': value,
-            'createtime': datetime.now().strftime('%Y-%m-%d %H:%S')
             }
     all_data[monitor_type].append(data)
 
@@ -35,14 +35,20 @@ def get_num_monitor_data(data):
             logging.exception('get_num_monitor_data error:%s', data)
 
     # 对num_avg类型的数据计算平均数
+    avg_total = defaultdict(long)
+    avg_count = defaultdict(int)
     datas = data['num_avg']
     for data in datas:
+        monitor_id = data['monitor_id']
         try:
-            current_value = long(result[data['monitor_id']])
             value = long(data['value'])
-            result[data['monitor_id']] = (current_value + value) / 2
+            avg_total[monitor_id] += value
+            avg_count[monitor_id] += 1
         except:
             logging.exception('get_num_monitor_data error:%s', data)
+
+    for monitor_id in avg_total.keys():
+        result[monitor_id] = round(avg_total[monitor_id] / avg_count[monitor_id])
 
     return result
      
@@ -57,7 +63,8 @@ def get_text_monitor_data(data):
 
 def send_data(url, to_send):
     logging.debug('begin send_data:%s %s', url, to_send)
-    if not to_send: return
+    if not to_send:
+        return
     try:
         req = urllib2.Request(url)
         data = urllib.urlencode(to_send)
@@ -79,10 +86,10 @@ class DataSender(common.StoppableThread):
                     all_data.clear()
 
                     data = get_num_monitor_data(current_data)
-                    send_data(config.collector_url, data)
+                    send_data(config.num_collector_url, data)
 
                     data = get_text_monitor_data(current_data)
-                    send_data(config.https_collector_url, data)
+                    send_data(config.text_collector_url, data)
                 time.sleep(1)
             except:
                 logging.exception('DataSender run error')

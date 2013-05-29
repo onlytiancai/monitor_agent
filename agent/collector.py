@@ -21,15 +21,23 @@ class RequestHandler(ThreadingMixIn, BaseHTTPRequestHandler):
         postvars = self.parse_POST()
         logging.debug('do post:%s', postvars)
 
-        monitor_id = postvars.get('monitor_id')
-        monitor_type = postvars.get('monitor_type')
+        appname = postvars.get('appname')
+        monitor_name = postvars.get('name')
+        monitor_type = postvars.get('type')
         monitor_value = postvars.get('value')
 
-        if monitor_id is None or monitor_type is None or monitor_value is None:
+        if (appname is None
+                or monitor_name is None
+                or monitor_type is None
+                or monitor_value is None):
             self.send_error(400, 'arg error')
             return
 
-        data_operator.recv_monitor_data(monitor_id[0], monitor_type[0], monitor_value[0])
+        data_operator.recv_monitor_data(appname=appname[0],
+                                        monitor_name=monitor_name[0],
+                                        monitor_type=monitor_type[0],
+                                        value=monitor_value[0]
+                                        )
         self.send_response(200)
 
 
